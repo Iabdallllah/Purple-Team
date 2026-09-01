@@ -10,11 +10,13 @@
     "next": "^14.2.0"
   },
   "scripts": {
+    "dev": "npm run dev --workspace=@purple/web",
     "dev:web": "npm run dev --workspace=@purple/web",
-    "dev:api": "npm run dev --workspace=purple-api || cd apps/api && uvicorn app.main:app --reload --port 8001",
+    "dev:api": "cd apps/api && uvicorn app.main:app --reload --port 8001",
     "build": "npm run build --workspace=@purple/shared && npm run build --workspace=@purple/web",
     "build:web": "npm run build --workspace=@purple/web",
     "build:shared": "npm run build --workspace=@purple/shared",
+    "start": "npm run start --workspace=@purple/web",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "docker:dev": "docker compose up -d",
