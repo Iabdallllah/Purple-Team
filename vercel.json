@@ -1,8 +1,8 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd packages/shared && npm install && npm run build && cd ../../apps/web && npm install && npm run build",
+  "installCommand": "npm install && npm install --prefix packages/shared && npm install --prefix apps/web",
+  "buildCommand": "npm run build",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install --prefix packages/shared && npm install --prefix apps/web",
   "devCommand": "npm run dev --workspace=@purple/web",
   "git": {
     "deploymentEnabled": {
