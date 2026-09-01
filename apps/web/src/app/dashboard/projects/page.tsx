@@ -134,7 +134,7 @@ export default function ProjectsPage() {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle>All Projects ({mockProjects.length})</CardTitle>
+            <CardTitle>All Projects ({projects.length})</CardTitle>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
@@ -162,7 +162,7 @@ export default function ProjectsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-100 dark:divide-dark-800">
-                {mockProjects.map((project) => (
+                {projects.map((project) => (
                   <tr key={project.id} className="hover:bg-dark-50 dark:hover:bg-dark-900/50">
                     <td className="py-4 px-4">
                       <Link href={`/dashboard/projects/${project.id}`} className="font-medium text-dark-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400">
@@ -178,7 +178,7 @@ export default function ProjectsPage() {
                     </td>
                     <td className="py-4 px-4 text-dark-600 dark:text-dark-300">{project.targetCount}</td>
                     <td className="py-4 px-4 text-dark-600 dark:text-dark-300">{project.episodeCount}</td>
-                    <td className="py-4 px-4 text-dark-500 dark:text-dark-400 text-sm">{formatRelativeTime(project.updatedAt)}</td>
+                    <td className="py-4 px-4 text-dark-500 dark:text-dark-400 text-sm"><RelativeTime date={project.updatedAt} /></td>
                     <td className="py-4 px-4 text-right">
                       <Link href={`/dashboard/projects/${project.id}`} className="text-primary-600 hover:text-primary-700">
                         View
