@@ -1,41 +1,41 @@
-export default {
-  expo: {
-    name: "Purple Platform",
-    slug: "purple-platform",
-    version: "1.0.0",
-    orientation: "portrait",
-    icon: "./assets/icon.png",
-    userInterfaceStyle: "automatic",
-    splash: {
-      image: "./assets/splash.png",
-      resizeMode: "contain",
-      backgroundColor: "#1e293b"
+{
+  "expo": {
+    "name": "Purple Platform",
+    "slug": "purple-platform",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1e293b"
     },
-    updates: {
-      fallbackToCacheTimeout: 0
+    "updates": {
+      "fallbackToCacheTimeout": 0
     },
-    assetBundlePatterns: ["**/*"],
-    ios: {
-      supportsTablet: true,
-      bundleIdentifier: "com.purple.platform"
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.purple.platform"
     },
-    android: {
-      adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#1e293b"
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e293b"
       },
-      package: "com.purple.platform"
+      "package": "com.purple.platform"
     },
-    web: {
-      favicon: "./assets/favicon.png"
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
-    plugins: [
+    "plugins": [
       "expo-router",
       "expo-notifications",
       "expo-secure-store"
     ],
-    experiments: {
-      typedRoutes: true
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
