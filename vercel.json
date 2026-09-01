@@ -1,9 +1,9 @@
 {
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm run build",
   "outputDirectory": "apps/web/.next",
-  "devCommand": "npm run dev --workspace=@purple/web",
+  "devCommand": "pnpm run dev --workspace=@purple/web",
   "git": {
     "deploymentEnabled": {
       "main": true
