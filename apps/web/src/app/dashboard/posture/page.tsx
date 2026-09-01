@@ -55,6 +55,7 @@ export default function PosturePage() {
           if(d?.items?.length) setHistory(d.items.map((s:any,i:number)=>({episode:i+1, detectionRate:s.detection_rate, mttr:s.mttr_seconds})));
         }).catch(()=>{});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
   const data = posture || mockPosture;
