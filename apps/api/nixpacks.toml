@@ -2,7 +2,7 @@
 nixPkgs = ["python311", "postgresql"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt && pip install aiosqlite email-validator python-socketio prometheus-fastapi-instrumentator"]
+cmds = ["pip install -r requirements.txt && pip install aiosqlite email-validator python-socketio prometheus-fastapi-instrumentator && pip install -e ../../packages/sandbox -e ../../packages/agents || pip install -e ./packages/sandbox -e ./packages/agents || true"]
 
 [phases.build]
 cmds = ["echo 'No build needed for Python API'"]

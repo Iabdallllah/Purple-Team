@@ -6,7 +6,7 @@
       "providers": ["python"],
       "phases": {
         "setup": { "nixPkgs": ["python311", "postgresql"] },
-        "install": { "cmds": ["pip install -r apps/api/requirements.txt && pip install aiosqlite email-validator python-socketio prometheus-fastapi-instrumentator"] },
+        "install": { "cmds": ["pip install -r apps/api/requirements.txt && pip install aiosqlite email-validator python-socketio prometheus-fastapi-instrumentator && pip install -e ./packages/sandbox -e ./packages/agents || pip install -e ../../packages/sandbox -e ../../packages/agents || true"] },
         "build": { "cmds": ["echo No build needed for Python API"] }
       }
     }
