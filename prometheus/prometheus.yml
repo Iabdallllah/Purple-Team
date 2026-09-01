@@ -1,0 +1,111 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'purple-platform'
+    environment: 'development'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - 'alertmanager:9093'
+
+rule_files:
+  - 'rules/*.yml'
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Purple Platform API
+  - job_name: 'purple-api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8001']
+        labels:
+          service: 'purple-api'
+          environment: 'development'
+
+  # Purple Web (Next.js)
+  - job_name: 'purple-web'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+        labels:
+          service: 'purple-web'
+          environment: 'development'
+
+  # Node Exporter for host metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+
+  # cAdvisor for container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['host.docker.internal:6379']
+        labels:
+          service: 'redis'
+
+  # PostgreSQL (using postgres-exporter if available)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['host.docker.internal:5432']
+        labels:
+          service: 'postgres'
+
+  # ChromaDB
+  - job_name: 'chromadb'
+    metrics_path: '/api/v1/heartbeat'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+        labels:
+          service: 'chromadb'
+
+  # Ollama
+  - job_name: 'ollama'
+    metrics_path: '/api/tags'
+    static_configs:
+      - targets: ['host.docker.internal:11434']
+        labels:
+          service: 'ollama'
+
+  # Docker (via cAdvisor)
+  - job_name: 'docker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'docker'
+
+  # Alertmanager
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+        labels:
+          service: 'alertmanager'
+
+  # Node Exporter
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Pushgateway for ephemeral jobs (episodes)
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['host.docker.internal:9091']
+        labels:
+          service: 'pushgateway'

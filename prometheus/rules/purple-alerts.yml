@@ -1,0 +1,219 @@
+groups:
+  - name: purple-platform-alerts
+    interval: 30s
+    rules:
+      # Episode alerts
+      - alert: EpisodeFailureRateHigh
+        expr: |
+          rate(purple_episodes_total{status="failed"}[5m]) / rate(purple_episodes_total[5m]) > 0.2
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High episode failure rate"
+          description: "Episode failure rate is above 20% for the last 5 minutes"
+
+      - alert: EpisodeDurationTooLong
+        expr: |
+          histogram_quantile(0.95, sum(rate(purple_episodes_duration_seconds_bucket[5m])) by (le, scenario)) > 1800
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Episode duration too long"
+          description: "95th percentile episode duration exceeds 30 minutes for scenario {{ $labels.scenario }}"
+
+      - alert: NoActiveEpisodes
+        expr: |
+          purple_episodes_active == 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "No active episodes"
+          description: "No episodes have been running for the last 10 minutes"
+
+      # Attack alerts
+      - alert: AttackSuccessRateHigh
+        expr: |
+          sum(rate(purple_attacks_total{success="true"}[5m])) by (technique_id) / sum(rate(purple_attacks_total[5m])) by (technique_id) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High attack success rate"
+          description: "Attack technique {{ $labels.technique_id }} has success rate above 80%"
+
+      - alert: AttackSpike
+        expr: |
+          rate(purple_attacks_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Attack spike detected"
+          description: "Attack rate exceeds 10 per second"
+
+      # Detection alerts
+      - alert: DetectionRateLow
+        expr: |
+          sum(rate(purple_detections_total{detected="true"}[5m])) / sum(rate(purple_detections_total[5m])) < 0.5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Detection rate too low"
+          description: "Overall detection rate below 50%"
+
+      - alert: DetectionConfidenceLow
+        expr: |
+          histogram_quantile(0.5, sum(rate(purple_detection_confidence_bucket[5m])) by (le, detection_type)) < 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Detection confidence too low"
+          description: "Median detection confidence below 30% for {{ $labels.detection_type }}"
+
+      # Response alerts
+      - alert: ResponseFailureRateHigh
+        expr: |
+          sum(rate(purple_responses_total{success="false"}[5m])) / sum(rate(purple_responses_total[5m])) > 0.3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Response failure rate high"
+          description: "Response failure rate above 30%"
+
+      # Posture score alerts
+      - alert: PostureScoreDeclining
+        expr: |
+          purple_posture_score < 50
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Posture score critically low"
+          description: "Security posture score for project {{ $labels.project_id }} is below 50"
+
+      - alert: PostureScoreDecliningTrend
+        expr: |
+          (purple_posture_score - purple_posture_score offset 1h) < -10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Posture score declining rapidly"
+          description: "Posture score dropped more than 10 points in the last hour for project {{ $labels.project_id }}"
+
+      - alert: DetectionRateLow
+        expr: |
+          purple_detection_rate < 0.6
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Detection rate below threshold"
+          description: "Detection rate for project {{ $labels.project_id }} is below 60%"
+
+      - alert: MTTRTooHigh
+        expr: |
+          purple_mttr_seconds > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MTTR too high"
+          description: "Mean time to respond exceeds 5 minutes for project {{ $labels.project_id }}"
+
+      # System alerts
+      - alert: HighCPUUsage
+        expr: |
+          purple_system_cpu_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "System CPU usage above 85%"
+
+      - alert: HighMemoryUsage
+        expr: |
+          purple_system_memory_percent > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage"
+          description: "System memory usage above 90%"
+
+      - alert: HighDiskUsage
+        expr: |
+          purple_system_disk_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage above 85%"
+
+      - alert: DatabaseConnectionsHigh
+        expr: |
+          purple_db_connections_active > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "Active database connections above 80"
+
+      - alert: SandboxContainersHigh
+        expr: |
+          purple_sandbox_containers_active > 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Too many sandbox containers"
+          description: "More than 15 sandbox containers running simultaneously"
+
+      - alert: EpisodeQueueBacklog
+        expr: |
+          redis_operations_total{operation="xreadgroup", status="error"} > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Episode queue processing errors"
+          description: "Redis stream consumer group experiencing errors"
+
+      - alert: APIDurationHigh
+        expr: |
+          histogram_quantile(0.95, sum(rate(purple_api_request_duration_seconds_bucket[5m])) by (le, endpoint)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "95th percentile API latency exceeds 2 seconds for {{ $labels.endpoint }}"
+
+      - alert: APIErrorRateHigh
+        expr: |
+          sum(rate(purple_api_requests_total{status=~"5.."}[5m])) by (endpoint) / sum(rate(purple_api_requests_total[5m])) by (endpoint) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate"
+          description: "5xx error rate exceeds 5% for {{ $labels.endpoint }}"
+
+      - alert: LLMDurationHigh
+        expr: |
+          histogram_quantile(0.95, sum(rate(purple_llm_request_duration_seconds_bucket[5m])) by (le, model)) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM response time too high"
+          description: "LLM {{ $labels.model }} 95th percentile latency exceeds 30 seconds"

@@ -1,0 +1,40 @@
+# deps
+node_modules/
+.pnp/
+dist/
+.next/
+out/
+build/
+.turbo/
+.parcel-cache/
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.local
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+mypy_cache/
+ruff_cache/
+
+# docker volumes (local)
+postgres_data/
+redis_data/
+chroma_data/
+ollama_data/
+prometheus_data/
+grafana_data/
+alertmanager_data/
+
+# os
+.DS_Store
+.idea/
+.vscode/
+*.log
+tmp/
