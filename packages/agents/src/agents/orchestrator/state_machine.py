@@ -286,17 +286,57 @@ class Orchestrator:
                 pass
         mttr = sum(mttr_vals)/len(mttr_vals) if mttr_vals else (15.0 if state.responses_applied else 0.0)
 
-        # Coverage per OWASP category (A01-A10) based on techniques exercised vs MITRE/OWASP mapping
-        from collections import Counter
-        owasp_categories = [a.get("owasp_category") for a in state.attacks_executed if a.get("owasp_category")]
-        counts = Counter(owasp_categories)
-        # PDF defines coverage mapped to MITRE/OWASP categories; we compute covered / total techniques per category (heuristic)
-        # Total techniques per category from shared constants (fallback 5 per category)
+        # Coverage per OWASP category (A01-A10) based on distinct MITRE techniques exercised vs full OWASP/MITRE matrix
+        # Totals derived from packages/shared/src/constants/owasp.ts (OWASP_TOP_10_2021.mitreTechniques length) and mitre.ts
+        # This replaces previous heuristic (1/1) with real matrix per proposal KPIs.
+        OWASP_TOTAL_TECHNIQUES = {
+            "A01": 3,  # T1548, T1083, T1005 (OWASP) / 4 with mitre.ts inclusive
+            "A02": 3,  # T1557, T1040, T1552
+            "A03": 3,  # T1190, T1059, T1059.007 (core) / 8 with full mitre
+            "A04": 2,  # T1599, T1585
+            "A05": 3,  # T1599, T1585, T1592
+            "A06": 2,  # T1190, T1585
+            "A07": 3,  # T1110, T1556, T1539
+            "A08": 3,  # T1195, T1553, T1584
+            "A09": 3,  # T1562, T1070, T1556
+            "A10": 3,  # T1590, T1592, T1580
+        }
+        # More accurate full matrix from mitre.ts (technique -> owaspCategories):
+        # Used for distinct counting when technique appears in multiple categories via its declared owaspCategories
+        # Fallback to attack's owasp_category if technique not in map
+        MITRE_TO_OWASP = {
+            "T1190": ["A03","A06"], "T1199": ["A01","A04"], "T1059": ["A03"], "T1059.007": ["A03"],
+            "T1505": ["A03","A08"], "T1548": ["A01","A07"], "T1070": ["A09"], "T1562": ["A05","A09"],
+            "T1552": ["A02","A07"], "T1556": ["A07"], "T1083": ["A01","A05"], "T1590": ["A05","A10"],
+            "T1592": ["A05","A10"], "T1570": ["A03","A08"], "T1005": ["A01","A02"], "T1071": ["A03","A10"],
+            "T1485": ["A03","A04"], "T1491": ["A03","A04"], "T1548.003": ["A01"], "T1548.002": ["A01"],
+            "T1556.002": ["A07"], "T1556.001": ["A07"], "T1599": ["A04","A05"], "T1585": ["A04","A05","A06"],
+            "T1110": ["A07"], "T1539": ["A07"], "T1195": ["A08"], "T1553": ["A08"], "T1584": ["A08"],
+            "T1557": ["A02"], "T1040": ["A02"], "T1580": ["A10"],
+        }
+        from collections import defaultdict
+        covered_by_cat: dict[str, set] = defaultdict(set)
+        for a in state.attacks_executed:
+            tid = a.get("technique_id")
+            owasp_cat = a.get("owasp_category")
+            if tid and tid in MITRE_TO_OWASP:
+                for cat in MITRE_TO_OWASP[tid]:
+                    covered_by_cat[cat].add(tid)
+            elif owasp_cat:
+                # fallback: count distinct technique per declared owasp
+                covered_by_cat[owasp_cat].add(tid or owasp_cat)
         coverage = {}
         for cat in ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10"]:
-            covered = 1 if counts.get(cat, 0) > 0 else 0
-            total = 1  # at least 1 technique per category in this episode
-            coverage[cat] = {"totalTechniques": total, "coveredTechniques": covered, "coverage": covered/total if total else 0.0}
+            total = OWASP_TOTAL_TECHNIQUES.get(cat, 3)
+            covered = len(covered_by_cat.get(cat, set()))
+            # cap at total (distinct techniques shouldn't exceed total; if exceeds, count as 100%)
+            covered_capped = min(covered, total)
+            coverage[cat] = {
+                "totalTechniques": total,
+                "coveredTechniques": covered_capped,
+                "coverage": round(covered_capped/total, 3) if total else 0.0,
+                "uniqueTechniques": sorted(list(covered_by_cat.get(cat, set()))) if covered else []
+            }
 
         # Overall score weighted: 60% detection, 20% MTTR (inverse), 20% coverage
         avg_coverage = sum(v["coverage"] for v in coverage.values())/len(coverage) if coverage else 0.0

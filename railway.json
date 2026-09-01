@@ -1,11 +1,21 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "nixpacks"
+    "builder": "nixpacks",
+    "nixpacksPlan": {
+      "providers": ["python"],
+      "phases": {
+        "setup": { "nixPkgs": ["python311", "postgresql"] },
+        "install": { "cmds": ["pip install -r apps/api/requirements.txt && pip install aiosqlite email-validator python-socketio prometheus-fastapi-instrumentator"] },
+        "build": { "cmds": ["echo No build needed for Python API"] }
+      }
+    }
   },
   "deploy": {
     "numReplicas": 1,
     "restartPolicyType": "onFailure",
-    "restartPolicyMaxRetries": 3
+    "restartPolicyMaxRetries": 5,
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
   }
 }

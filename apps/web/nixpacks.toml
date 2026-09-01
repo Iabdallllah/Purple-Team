@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm ci || npm install"]
+cmds = ["corepack enable && pnpm install || npm install"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["pnpm run build --filter=@purple/shared && pnpm run build --filter=@purple/web || npm run build"]
 
 [start]
-cmd = "npm start"
+cmd = "pnpm run start --filter=@purple/web || npm start"

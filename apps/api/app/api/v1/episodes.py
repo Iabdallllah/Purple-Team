@@ -25,18 +25,39 @@ settings = get_settings()
 _redis_client: Optional[redis.Redis] = None
 
 
-async def get_redis() -> redis.Redis:
+async def get_redis() -> Optional[redis.Redis]:
     global _redis_client
     if _redis_client is None:
-        _redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            _redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+            # quick ping check, but don't fail if unavailable in demo
+            await _redis_client.ping()
+        except Exception:
+            # Fallback: no redis (HF/Railway demo without redis) -> use None, episode will run inline or stay pending
+            import structlog
+            structlog.get_logger(__name__).warning("Redis unavailable, episode queue disabled", redis_url=settings.REDIS_URL)
+            return None
+    # verify still alive
+    try:
+        await _redis_client.ping()
+    except Exception:
+        return None
     return _redis_client
 
 
-async def push_episode_command(redis_client: redis.Redis, episode_id: UUID, command: str):
-    await redis_client.xadd(
-        "episode:commands",
-        {"episode_id": str(episode_id), "command": command, "timestamp": str(datetime.utcnow())},
-    )
+async def push_episode_command(redis_client: Optional[redis.Redis], episode_id: UUID, command: str):
+    if redis_client is None:
+        import structlog
+        structlog.get_logger(__name__).info("Skipping episode queue (no redis)", episode_id=str(episode_id))
+        return
+    try:
+        await redis_client.xadd(
+            "episode:commands",
+            {"episode_id": str(episode_id), "command": command, "timestamp": str(datetime.utcnow())},
+        )
+    except Exception as e:
+        import structlog
+        structlog.get_logger(__name__).warning("Failed to push episode command", error=str(e), episode_id=str(episode_id))
 
 
 from datetime import datetime, UTC
@@ -78,6 +99,7 @@ async def create_episode(
 
     redis_client = await get_redis()
     await push_episode_command(redis_client, episode.id, "start")
+    # If no redis (demo mode), mark as running inline would require worker; keep pending but return
 
     return episode
 

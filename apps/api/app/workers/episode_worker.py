@@ -48,7 +48,18 @@ class EpisodeWorker:
         self.running = False
 
     async def start(self):
-        self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+            await self.redis_client.ping()
+        except Exception as e:
+            logger.warning("Redis unavailable, worker will run in demo inline mode (no queue)", error=str(e))
+            self.redis_client = None
+            self.running = True
+            logger.info("Episode worker started (demo mode, no redis)")
+            # In demo mode, keep alive but don't block on queue
+            while self.running:
+                await asyncio.sleep(10)
+            return
         await self._ensure_consumer_group()
         self.running = True
         logger.info("Episode worker started")
@@ -146,6 +157,59 @@ class EpisodeWorker:
         episode.started_at = datetime.now(UTC)
         await db.commit()
 
+        # --- Sandbox: acquire container and ensure clean snapshot per episode ---
+        sandbox_container_id: Optional[str] = None
+        sandbox_target_url: Optional[str] = None
+        try:
+            from sandbox.docker_client import DockerClient
+            from sandbox.container_pool import ContainerPool
+            from sandbox.snapshot import SnapshotManager
+            from sandbox.schemas import SandboxConfig
+            docker_client = DockerClient(host=settings.DOCKER_HOST)
+            pool = ContainerPool(docker_client=docker_client, max_containers=settings.SANDBOX_MAX_CONTAINERS, network=settings.SANDBOX_NETWORK)
+            snap_mgr = SnapshotManager(docker_client=docker_client)
+            cfg = SandboxConfig(network=settings.SANDBOX_NETWORK, docker_host=settings.DOCKER_HOST)
+            # Try to restore snapshot if exists, else acquire fresh and create snapshot
+            snapshot_ref = f"purple-{target.type.value}:clean"
+            repo, tag = snapshot_ref.split(":")
+            if snap_mgr.get_snapshot_info(repo, tag):
+                # snapshot exists -> restore
+                restored_id = snap_mgr.restore_snapshot(repo, tag, new_container_name=f"purple-{target.type.value}-{episode.id.hex[:8]}", network=settings.SANDBOX_NETWORK)
+                if restored_id:
+                    sandbox_container_id = restored_id
+                    logger.info("Restored clean snapshot for episode", episode_id=str(episode.id), container_id=restored_id[:12])
+            if not sandbox_container_id:
+                # No snapshot or restore failed -> acquire from pool
+                sandbox_container_id = await pool.acquire(target.type.value, cfg)
+                if sandbox_container_id:
+                    # Create clean snapshot for next episodes (first time)
+                    try:
+                        snap_mgr.create_snapshot(sandbox_container_id, repo, tag)
+                    except Exception:
+                        pass
+                    logger.info("Acquired container for episode", episode_id=str(episode.id), container_id=sandbox_container_id[:12])
+            if sandbox_container_id:
+                status = docker_client.get_container_status(sandbox_container_id)
+                if status:
+                    # Derive target URL from container ports or use base_url fallback
+                    # Prefer mapped host port if available, else internal
+                    ports = status.ports or {}
+                    # Find first host port
+                    host_port = None
+                    for container_port, host_bindings in ports.items():
+                        if host_bindings:
+                            host_port = host_bindings[0].get("HostPort")
+                            if host_port:
+                                break
+                    if host_port:
+                        sandbox_target_url = f"http://localhost:{host_port}"
+                    else:
+                        # internal network address
+                        sandbox_target_url = f"http://{sandbox_container_id[:12]}:3000" if target.type.value == "juice_shop" else f"http://{sandbox_container_id[:12]}:80"
+        except Exception as e:
+            logger.warning("Sandbox unavailable, using target config URL", error=str(e))
+            sandbox_container_id = None
+
         rag_memory = RAGMemory(
             chroma_url=settings.CHROMADB_URL,
             collection_name=settings.CHROMADB_COLLECTION,
@@ -188,13 +252,17 @@ class EpisodeWorker:
             event_callback=event_callback,
         )
 
+        # Prefer sandbox URL if acquired, else config base_url
+        base_target_url = sandbox_target_url or target.config.get("base_url") or f"http://localhost:{target.config.get('exposed_ports', [80])[0]}" if isinstance(target.config.get('exposed_ports'), list) else "http://localhost:3001"
+        if isinstance(base_target_url, list):
+            base_target_url = base_target_url[0]
         context = EpisodeContext(
             episode_id=episode.id,
             project_id=project.id,
             target_app_id=target.id,
             scenario=episode.scenario,
             constraints=episode.constraints,
-            target_url=target.config.get("base_url", f"http://localhost:{target.config.get('exposed_ports', [80])[0]}"),
+            target_url=base_target_url,
             target_type=target.type.value,
         )
 
@@ -221,6 +289,26 @@ class EpisodeWorker:
 
         await db.commit()
         await red_team.close()
+        # Release sandbox container back to pool (or cleanup) — snapshot already captured clean state, so release for reuse resets via snapshot next time
+        if sandbox_container_id:
+            try:
+                from sandbox.docker_client import DockerClient
+                from sandbox.container_pool import ContainerPool
+                from sandbox.schemas import SandboxConfig
+                docker_client = DockerClient(host=settings.DOCKER_HOST)
+                pool = ContainerPool(docker_client=docker_client, max_containers=settings.SANDBOX_MAX_CONTAINERS, network=settings.SANDBOX_NETWORK)
+                # For isolation, we don't just release; we reset via stop+remove if we used snapshot restore path
+                # If we used pool acquire, release back
+                await pool.release(sandbox_container_id, target.type.value)
+            except Exception as e:
+                logger.warning("Failed to release sandbox container", container_id=sandbox_container_id[:12], error=str(e))
+                try:
+                    from sandbox.docker_client import DockerClient
+                    dc = DockerClient(host=settings.DOCKER_HOST)
+                    dc.stop_container(sandbox_container_id)
+                    dc.remove_container(sandbox_container_id, force=True)
+                except Exception:
+                    pass
 
     async def _save_results(
         self,

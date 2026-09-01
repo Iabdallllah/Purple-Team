@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from sqlalchemy import String, DateTime, Enum, ForeignKey, Index, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import UUID
 
 from app.core.database import Base
 

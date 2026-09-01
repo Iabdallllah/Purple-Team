@@ -16,7 +16,8 @@ const mockDetectionData = [
   { episode: 10, detectionRate: 0.83, mttr: 42 },
 ];
 
-export function DetectionRateChart() {
+export function DetectionRateChart({ data }: { data?: { episode: number; detectionRate: number; mttr: number }[] }) {
+  const chartData = data && data.length ? data : mockDetectionData;
   return (
     <Card>
       <CardHeader>
@@ -25,7 +26,7 @@ export function DetectionRateChart() {
       <CardContent>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockDetectionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <defs>
                 <linearGradient id="detectionGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />

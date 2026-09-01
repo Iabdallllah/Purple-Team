@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import String, DateTime, ForeignKey, JSON, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import UUID
 
 from app.core.database import Base
 

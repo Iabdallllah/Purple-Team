@@ -22,12 +22,31 @@ export default function EpisodeDetailPage(){
   const [err, setErr] = useState<string|null>(null);
   useEffect(()=>{
     const token = typeof window!=='undefined'? localStorage.getItem('access_token'):null;
-    fetch(`http://localhost:8001/api/v1/episodes/${id}`, {headers: token?{Authorization:`Bearer ${token}`}: {}}).then(async r=>{
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+    fetch(`${base}/api/v1/episodes/${id}`, {headers: token?{Authorization:`Bearer ${token}`}: {}}).then(async r=>{
       if(!r.ok) throw new Error(`${r.status} ${await r.text()}`);
       return r.json();
-    }).then(setData).catch(e=>setErr(String(e)));
+    }).then(j=>{
+      // map snake_case to camelCase
+      setData({
+        id: j.id,
+        projectId: j.project_id,
+        targetAppId: j.target_app_id,
+        scenario: j.scenario,
+        status: j.status,
+        constraints: j.constraints,
+        startedAt: j.started_at,
+        completedAt: j.completed_at,
+        error: j.error,
+        targetApp: j.target_app,
+        attacks: (j.attacks||[]).map((a:any)=>({id:a.id, technique_id:a.technique_id, owasp_category:a.owasp_category, success:a.success, confidence:a.confidence, timestamp:a.timestamp})),
+        detections: (j.detections||[]).map((d:any)=>({id:d.id, attackId:d.attack_id, detected:d.detected, detectionType:d.detection_type||d.detectionType, confidence:d.confidence, timestamp:d.timestamp})),
+        responses: (j.responses||[]).map((r:any)=>({id:r.id, detectionId:r.detection_id, actionType:r.action_type||r.actionType, success:r.success, timestamp:r.timestamp})),
+        score: j.score ? {detectionRate:j.score.detection_rate ?? j.score.detectionRate, mttrSeconds:j.score.mttr_seconds ?? j.score.mttrSeconds, coverage:j.score.coverage, overallScore:j.score.overall_score ?? j.score.overallScore} : undefined,
+      });
+    }).catch(e=>setErr(String(e)));
   },[id]);
-  if(err) return <div className="p-6"><Card className="p-6 border-red-200"><p className="text-red-600">{err}</p><p className="text-sm text-dark-500">Ensure API on :8001 and token set (login at /auth/login)</p></Card></div>;
+  if(err) return <div className="p-6"><Card className="p-6 border-red-200"><p className="text-red-600">{err}</p><p className="text-sm text-dark-500">Ensure API at {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'} and token set (login at /auth/login)</p></Card></div>;
   if(!data) return <div className="p-6">Loading episode {id}...</div>;
   const dr = data.score?.detectionRate ?? 0;
   const mttr = data.score?.mttrSeconds ?? 0;
