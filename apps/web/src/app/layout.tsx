@@ -13,12 +13,13 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: any;
 }) {
   return (
     <html lang="en" className={`${inter.variable} antialiased dark`}>
       <body className="min-h-screen bg-dark-50 dark:bg-dark-950">
-        <Providers>{children}</Providers>
+        {/* @ts-ignore - pnpm isolated @types/react duplicate */}
+        <Providers>{children as any}</Providers>
       </body>
     </html>
   );

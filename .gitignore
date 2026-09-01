@@ -38,3 +38,8 @@ alertmanager_data/
 .vscode/
 *.log
 tmp/
+.vercel
+.env*
+package-lock.json
+tsconfig.tsbuildinfo
+*.tsbuildinfo
