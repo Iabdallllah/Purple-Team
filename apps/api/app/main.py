@@ -74,3 +74,13 @@ app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "purple-api"}
+
+@app.get("/")
+async def root():
+    return {
+        "service": "purple-api",
+        "status": "healthy",
+        "docs": "/docs",
+        "health": "/health",
+        "api_prefix": settings.API_PREFIX,
+    }
