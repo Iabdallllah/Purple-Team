@@ -3,7 +3,10 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import Response
 from typing import Optional
 import time
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None  # type: ignore
 import asyncio
 
 # Custom registry
@@ -256,6 +259,9 @@ async def update_system_metrics():
     """Periodically update system metrics"""
     while True:
         try:
+            if psutil is None:
+                await asyncio.sleep(60)
+                continue
             # CPU
             system_cpu_usage.set(psutil.cpu_percent(interval=1))
             
