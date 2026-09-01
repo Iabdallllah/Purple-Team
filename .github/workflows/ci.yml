@@ -136,7 +136,13 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://purple:purple@localhost:5432/purple_test
           REDIS_URL: redis://localhost:6379/0
           JWT_SECRET: test-secret-key-for-testing-only
-        run: pytest --cov=app --cov-report=xml --cov-fail-under=0 || pytest --cov=app --cov-report=xml || echo 'api tests no tests yet - coverage 0 allowed'
+        run: |
+          pytest --cov=app --cov-report=xml --cov-fail-under=0 || status=$?
+          if [ "${status:-0}" -eq 5 ]; then
+            echo "No API tests were collected yet; allowing this temporarily."
+            exit 0
+          fi
+          exit "${status:-0}"
 
   build:
     name: Build
