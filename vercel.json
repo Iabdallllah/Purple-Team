@@ -1,0 +1,21 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd packages/shared && npm install && npm run build && cd ../../apps/web && npm install && npm run build",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "npm install --prefix packages/shared && npm install --prefix apps/web",
+  "devCommand": "npm run dev --workspace=@purple/web",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://purple-api.onrender.com"
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://purple-api.onrender.com/api/:path*"
+    }
+  ]
+}
